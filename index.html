@@ -5,47 +5,128 @@
   <title>Diabetes Risk Prediction (ONNX Model)</title>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    input { margin: 6px; width: 80px; }
-    button { margin-top: 10px; padding: 8px 12px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background-color: #f9fafc;
+    }
+    h2 {
+      color: #333;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 10px;
+      max-width: 800px;
+    }
+    label {
+      font-size: 14px;
+      color: #333;
+    }
+    input {
+      margin-top: 4px;
+      margin-bottom: 8px;
+      width: 100%;
+      padding: 5px;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 16px;
+      font-size: 15px;
+      cursor: pointer;
+      background-color: #0078d7;
+      border: none;
+      border-radius: 4px;
+      color: white;
+    }
+    button:hover {
+      background-color: #005fa3;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+    }
   </style>
 </head>
 <body>
   <h2>🩺 Diabetes Risk Prediction (ONNX Model)</h2>
-  <p>Enter sample health values to estimate diabetes risk score:</p>
+  <p>Enter sample lifestyle and health values below:</p>
 
-  <label>Age: <input type="number" id="age" value="45"></label><br>
-  <label>BMI: <input type="number" id="bmi" value="27"></label><br>
-  <label>Systolic BP: <input type="number" id="sbp" value="120"></label><br><br>
+  <form id="inputForm" class="grid">
+    <label>Age <input type="number" id="Age" value="45"></label>
+    <label>Gender (0=F,1=M) <input type="number" id="gender" value="1"></label>
+    <label>Ethnicity (0-n) <input type="number" id="ethnicity" value="0"></label>
+    <label>Education Level (0-n) <input type="number" id="education_level" value="2"></label>
+    <label>Income Level (0-n) <input type="number" id="income_level" value="1"></label>
+    <label>Employment Status (0-n) <input type="number" id="employment_status" value="1"></label>
+    <label>Smoking Status (0-n) <input type="number" id="smoking_status" value="0"></label>
+    <label>Alcohol Consumption / Week <input type="number" id="alcohol_consumption_per_week" value="1"></label>
+    <label>Physical Activity (min/week) <input type="number" id="physical_activity_minutes_per_week" value="120"></label>
+    <label>Diet Score <input type="number" id="diet_score" value="7"></label>
+    <label>Sleep Hours / Day <input type="number" id="sleep_hours_per_day" value="7"></label>
+    <label>Screen Time (hrs/day) <input type="number" id="screen_time_hours_per_day" value="3"></label>
+    <label>Family History Diabetes (0/1) <input type="number" id="family_history_diabetes" value="1"></label>
+    <label>Hypertension History (0/1) <input type="number" id="hypertension_history" value="0"></label>
+    <label>Cardiovascular History (0/1) <input type="number" id="cardiovascular_history" value="0"></label>
+    <label>BMI <input type="number" id="bmi" value="27"></label>
+    <label>Waist-to-Hip Ratio <input type="number" id="waist_to_hip_ratio" value="0.85" step="0.01"></label>
+    <label>Systolic BP <input type="number" id="systolic_bp" value="120"></label>
+    <label>Diastolic BP <input type="number" id="diastolic_bp" value="80"></label>
+    <label>Heart Rate <input type="number" id="heart_rate" value="72"></label>
+    <label>Total Cholesterol <input type="number" id="cholesterol_total" value="190"></label>
+    <label>HDL Cholesterol <input type="number" id="hdl_cholesterol" value="50"></label>
+    <label>LDL Cholesterol <input type="number" id="ldl_cholesterol" value="100"></label>
+    <label>Triglycerides <input type="number" id="triglycerides" value="150"></label>
+  </form>
 
   <button onclick="predict()">Predict Risk Score</button>
   <p id="result"></p>
 
   <script>
     async function predict() {
-      document.getElementById('result').textContent = "Running inference...";
+      document.getElementById("result").textContent = "Running inference...";
       try {
-        // Example: using 3 input features (Age, BMI, SBP)
-        const age = parseFloat(document.getElementById('age').value);
-        const bmi = parseFloat(document.getElementById('bmi').value);
-        const sbp = parseFloat(document.getElementById('sbp').value);
+        // Collect values in dataset order
+        const ids = [
+          "Age","gender","ethnicity","education_level","income_level","employment_status",
+          "smoking_status","alcohol_consumption_per_week","physical_activity_minutes_per_week",
+          "diet_score","sleep_hours_per_day","screen_time_hours_per_day",
+          "family_history_diabetes","hypertension_history","cardiovascular_history",
+          "bmi","waist_to_hip_ratio","systolic_bp","diastolic_bp","heart_rate",
+          "cholesterol_total","hdl_cholesterol","ldl_cholesterol","triglycerides"
+        ];
 
-        const input = new Float32Array([age, bmi, sbp]);
-        const tensor = new ort.Tensor('float32', input, [1, 3]);
+        const features = new Float32Array(24);
+        ids.forEach((id, i) => { features[i] = parseFloat(document.getElementById(id).value) || 0; });
 
-        const session = await ort.InferenceSession.create('https://raw.githubusercontent.com/adhikarj/ML/main/diabetes_risk_model.onnx');
-        const feeds = { input: tensor };
+        const tensor = new ort.Tensor("float32", features, [1, 24]);
+
+        const session = await ort.InferenceSession.create(
+          "https://raw.githubusercontent.com/adhikarj/ML/main/diabetes_risk_model.onnx"
+        );
+
+        // You can print input/output names once to verify:
+        // console.log(session.inputNames, session.outputNames);
+
+        const feeds = { [session.inputNames[0]]: tensor };
         const results = await session.run(feeds);
-        const output = results.output.data[0];
+        const outputName = session.outputNames[0];
+        const output = results[outputName].data[0];
 
-        document.getElementById('result').innerHTML =
+        document.getElementById("result").innerHTML =
           `<b>Predicted Diabetes Risk Score:</b> ${output.toFixed(2)}`;
       } catch (err) {
         console.error(err);
-        document.getElementById('result').textContent = "Error running model (check console).";
+        document.getElementById("result").innerHTML =
+          `<span style="color:red;">⚠️ Error running model: ${err.message}</span>`;
       }
     }
   </script>
+
+  <p style="font-size:13px;color:gray;margin-top:40px;">
+    Model powered by ONNX Runtime Web • Deployed on GitHub Pages • © 2025 Purdue University Project
+  </p>
 </body>
 </html>
 
