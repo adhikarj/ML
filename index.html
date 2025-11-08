@@ -33,7 +33,7 @@
         const input = new Float32Array([age, bmi, sbp]);
         const tensor = new ort.Tensor('float32', input, [1, 3]);
 
-        const session = await ort.InferenceSession.create('diabetes_risk_model.onnx');
+        const session = await ort.InferenceSession.create('https://raw.githubusercontent.com/adhikarj/ML/main/diabetes_risk_model.onnx');
         const feeds = { input: tensor };
         const results = await session.run(feeds);
         const output = results.output.data[0];
@@ -48,3 +48,4 @@
   </script>
 </body>
 </html>
+
